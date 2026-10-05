@@ -1,85 +1,79 @@
-# Nabertherm Kiln Analyzer 9.6
+# Nabertherm Kiln Analyzer 9.7
 
-Version 9.6 inkluderar uppdaterad bränningssida och en webbaserad utvecklingsmiljö med code-server.
+Version 9.7 introducerar stöd för Docker Compose-profiler så att samma installation kan användas både som produktionsmiljö och utvecklingsmiljö. `code-server` är nu valfri och startas endast när utvecklingsprofilen används.
 
-## Korrigering i 9.6
+## Nytt i 9.7
 
-Python-miljön skapas och valideras automatiskt när code-server startar. Om `.venv` är trasig, skapad på en annan arkitektur eller saknar en körbar interpreter tas den bort och återskapas. Debuggern använder den verifierade sökvägen `/workspace/.venv/bin/python3`.
+### Docker Compose-profiler
 
-## Start
+Projektet använder nu Docker Compose-profiler:
 
-1. Ändra `CODE_SERVER_PASSWORD` i `.env`.
-2. Kör:
+- **Produktion**: backend + frontend.
+- **Utveckling**: backend + frontend + code-server.
+
+Det innebär att produktionsmiljön inte längre behöver köra eller ens bygga utvecklingsmiljön.
+
+### Python-miljö i code-server
+
+Python-miljön skapas och valideras automatiskt när code-server startar. Om `.venv` är trasig, skapad på en annan arkitektur eller saknar en körbar interpreter tas den bort och återskapas. Debuggern använder den verifierade sökvägen:
+
+```text
+/workspace/.venv/bin/python3
+```
+
+---
+
+# Installation
+
+## Förberedelser
+
+1. Kopiera eller skapa en `.env`-fil.
+2. Ange önskat lösenord:
+
+```env
+CODE_SERVER_PASSWORD=byt-till-ett-starkt-losenord
+```
+
+---
+
+# Produktionsdrift
+
+Startar endast frontend och backend.
 
 ```bash
 docker compose down
 docker compose up -d --build
 ```
 
-3. Följ första starten:
+Öppna applikationen:
+
+```text
+http://localhost:8066
+```
+
+---
+
+# Utvecklingsmiljö
+
+Startar frontend, backend och code-server.
+
+```bash
+docker compose down
+docker compose --profile dev up -d --build
+```
 
 ```bash
 docker compose logs -f code-server
 ```
 
-4. Öppna:
+---
 
-- App: http://localhost:8066
-- code-server: http://localhost:8443
-
-Vänta tills loggen visar att Python-beroendena är installerade och code-server har startat innan du startar `Backend: FastAPI`.
-
-## Om en gammal `.venv` ligger kvar
-
-Startskriptet reparerar den automatiskt. Det finns också en VS Code-task:
-
-```text
-Terminal > Run Task > Repair Python environment
-```
-
-## Säkerhet
-
-Port 8443 och utvecklingsportarna är bundna till localhost. Docker-socketen ger utvecklingscontainern omfattande åtkomst till värddatorns Docker-daemon. Ta bort socket-mounten om den inte behövs.
-
-## Kodstruktur och fortsatt utveckling
-
-Projektet är formaterat för att kunna underhållas i VS Code utan att först behöva läsa kompakterad kod.
-
-### Backend
-
-- `backend/app/main.py` innehåller API-rutter och samordnar övriga moduler.
-- `backend/app/calculation.py` innehåller energi- och kostnadsberäkningar.
-- `backend/app/parser.py` läser Nabertherms CSV-format.
-- `backend/app/pricing.py` hämtar och cachelagrar elpriser.
-- `backend/app/storage.py` ansvarar för säker JSON-lagring.
-- `backend/app/config.py` innehåller sökvägar, ugnsmodeller och standardvärden.
-
-Pythonkoden formateras och kontrolleras med Ruff:
+# Vanliga kommandon
 
 ```bash
-cd backend
-ruff format .
-ruff check .
-pytest
+docker compose up -d
+docker compose --profile dev up -d
+docker compose build
+docker compose --profile dev build
+docker compose down
 ```
-
-### Frontend
-
-- `frontend/src/main.tsx` innehåller applikationens tillstånd, navigation och API-anrop.
-- `frontend/src/components/FiringComponents.tsx` innehåller återanvändbara vy- och diagramkomponenter.
-- `frontend/src/styles.css` innehåller den applikationsspecifika formgivningen.
-- `frontend/src/translations.json` innehåller samtliga översättningar.
-
-Frontendkoden formateras med Prettier:
-
-```bash
-cd frontend
-npm install
-npm run format
-npm test
-npm run build
-```
-
-### Kontroll före incheckning
-
-Kör både backendtester och frontendtester. CI-flödet i `.github/workflows/ci.yml` gör dessutom ett Docker Compose-bygge.
