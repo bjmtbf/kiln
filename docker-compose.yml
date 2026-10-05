@@ -1,55 +1,90 @@
 services:
+
   backend:
     build: ./backend
     restart: unless-stopped
+
     environment:
       DATA_DIR: /data
+
     volumes:
       - ./data:/data
-    expose: ["8000"]
+
+    expose:
+      - "8000"
+
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+
   frontend:
     build: ./frontend
     restart: unless-stopped
+
     depends_on:
       backend:
         condition: service_healthy
-    ports: ["8066:80"]
+
+    ports:
+      - "8066:80"
+
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "--spider",
+          "http://127.0.0.1/"
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
   code-server:
+    profiles:
+      - dev
+
     build:
       context: .
       dockerfile: development/Dockerfile
+
     restart: unless-stopped
+
     depends_on:
       backend:
         condition: service_healthy
       frontend:
         condition: service_healthy
+
     environment:
       PASSWORD: ${CODE_SERVER_PASSWORD}
+
     ports:
       - "127.0.0.1:8443:8443"
       - "127.0.0.1:5173:5173"
       - "127.0.0.1:8001:8001"
       - "127.0.0.1:5678:5678"
+
     volumes:
       - ./:/workspace
       - code_server_settings:/config
       - code_server_extensions:/extensions
       - code_server_workspace:/workspace-state
       - /var/run/docker.sock:/var/run/docker.sock
+
     working_dir: /workspace
+
 volumes:
   code_server_settings:
   code_server_extensions:
